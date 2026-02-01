@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polskie Pola 25</title>
+<style>
+body{margin:0;font-family:Arial;background:#2e7d32;color:#fff;text-align:center}
+.card{background:#1b5e20;margin:10px auto;padding:12px;border-radius:10px;width:94%;max-width:440px}
+button,select{width:100%;padding:12px;margin:4px 0;font-size:15px;border:none;border-radius:6px}
+hr{border:1px solid #388e3c}
+</style>
+</head>
+<body>
+
+<h2>🇵🇱 Polskie Pola 25</h2>
+
+<select onchange="selectMachine(this.value)">
+<option value="c330">Ursus C-330</option>
+<option value="c360">Ursus C-360</option>
+<option value="zetor">Zetor 7211</option>
+<option value="t7">New Holland T7</option>
+<option value="bizon">Bizon</option>
+<option value="claas">Claas Dominator</option>
+</select>
+
+<select onchange="selectField(this.value)">
+<option value="0">Pole 1 (1 ha)</option>
+<option value="1">Pole 2 (2 ha)</option>
+<option value="2">Pole 3 (3 ha)</option>
+</select>
+
+<div class="card">
+<p id="status"></p>
+<hr>
+<button onclick="orka()">Orka</button>
+<button onclick="kultywator()">Kultywator</button>
+<button onclick="siew()">Siew (siewnik)</button>
+<button onclick="zbior()">Zbior</button>
+<button onclick="sprzedaz()">Sprzedaz (przyczepa)</button>
+<hr>
+<button onclick="tankuj()">Tankuj</button>
+<button onclick="napraw()">Napraw</button>
+</div>
+
+<script>
+let saveData = JSON.parse(localStorage.getItem("pp25")) || {
+ money:8000,
+ machine:{id:"c330",fuel:80,cond:100},
+ field:0,
+ fields:[
+  {size:1,stage:"puste",crop:""},
+  {size:2,stage:"puste",crop:""},
+  {size:3,stage:"puste",crop:""}
+ ]
+};
+
+const machines={
+ c330:{name:"Ursus C-330",max:80,burn:6,w1:4,w2:9},
+ c360:{name:"Ursus C-360",max:100,burn:10,w1:3,w2:8},
+ zetor:{name:"Zetor 7211",max:120,burn:8,w1:2,w2:6},
+ t7:{name:"New Holland T7",max:180,burn:6,w1:1,w2:3},
+ bizon:{name:"Bizon",max:200,burn:14,w1:4,w2:10},
+ claas:{name:"Claas Dominator",max:220,burn:12,w1:3,w2:7}
+};
+
+function save(){localStorage.setItem("pp25",JSON.stringify(saveData));}
+function field(){return saveData.fields[saveData.field];}
+
+function selectMachine(id){
+ let m=machines[id];
+ saveData.machine={id,fuel:m.max,cond:100};
+ save();update();
+}
+function selectField(i){saveData.field=parseInt(i);save();update();}
+
+function update(){
+ let m=machines[saveData.machine.id];
+ let f=field();
+ document.getElementById("status").innerHTML=
+ "🚜 "+m.name+
+ "<br>💰 "+saveData.money+" zl"+
+ "<br>⛽ "+saveData.machine.fuel+"/"+m.max+
+ "<br>🔧 "+saveData.machine.cond+"%"+
+ "<br>🌾 Pole "+(saveData.field+1)+" ("+f.size+" ha)"+
+ "<br>📌 Stan: "+f.stage+
+ (f.crop?"<br>🌱 "+f.crop:"");
+}
+
+function work(mult=1){
+ let m=machines[saveData.machine.id];
+ let fuelNeed=m.burn*mult;
+ if(saveData.machine.fuel<fuelNeed){alert("Brak paliwa");return false;}
+ saveData.machine.fuel-=fuelNeed;
+ saveData.machine.cond-=Math.floor(Math.random()*(m.w2-m.w1+1))+m.w1;
+ if(saveData.machine.cond<25&&Math.random()<0.25){alert("Awaria");return false;}
+ save();return true;
+}
+
+function orka(){let f=field(); if(f.stage!="puste")return;
+ if(work(f.size)){f.stage="zaorane";save();update();}}
+
+function kultywator(){let f=field(); if(f.stage!="zaorane")return;
+ if(work(f.size)){f.stage="skultywowane";save();update();}}
+
+function siew(){let f=field(); if(f.stage!="skultywowane")return;
+ if(work(f.size)){
+  f.crop=["pszenica","zyto","ziemniaki"][Math.floor(Math.random()*3)];
+  f.stage="zasiane";
+  save();update();
+ }}
+
+function zbior(){let f=field(); if(f.stage!="zasiane")return;
+ if(work(f.size)){f.stage="zebrane";save();update();}}
+
+function sprzedaz(){let f=field(); if(f.stage!="zebrane")return;
+ let ceny={pszenica:2200,zyto:1800,ziemniaki:1500};
+ saveData.money+=ceny[f.crop]*f.size;
+ f.stage="puste";f.crop="";
+ save();update();
+}
+
+function tankuj(){if(saveData.money<500)return;
+ saveData.money-=500;
+ saveData.machine.fuel=machines[saveData.machine.id].max;
+ save();update();}
+
+function napraw(){if(saveData.money<1200)return;
+ saveData.money-=1200;
+ saveData.machine.cond=100;
+ save();update();}
+
+update();
+</script>
+</body>
+</html>
